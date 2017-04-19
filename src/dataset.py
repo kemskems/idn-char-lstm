@@ -15,8 +15,7 @@ class KompasTempo:
 
     def _get_iterator(self):
         with open(self._dataset_file) as f:
-            for line in f:
-                yield '<s>' + line + '</s>'
+            yield from f
 
     def __iter__(self):
         return islice(self._get_iterator(), self.max_sentences)
@@ -26,8 +25,12 @@ class KompasTempoDataset(Dataset):
     def __init__(self, iterator):
         self.lines = list(iterator)
 
+    def _to_chars(self, line):
+        return ['<s>'] + list(line) + ['</s>']
+
     def __getitem__(self, index):
-        return self.lines[index]
+        chars = self._to_chars(self.lines[index])
+        return chars[:-1], chars[1:]
 
     def __len__(self):
         return len(self.lines)
