@@ -32,20 +32,18 @@ def main(corpus_dir, train=0.7, valid=0.2):
 def read_kompas(corpus_dir):
     for filename in glob.glob(os.path.join(corpus_dir, 'kompas', 'txt', '**', '*.txt')):
         with open(filename) as f:
-            for line in f:
-                yield line.strip()
+            yield from f
 
 
 def read_tempo(corpus_dir):
     for filename in glob.glob(os.path.join(corpus_dir, 'tempo', 'txt', '**', '*.txt')):
         with open(filename) as f:
-            for line in f:
-                yield line.strip()
+            yield from f
 
 
 def write_to_file(path, lines):
     with open(path, 'w') as f:
-        print('\n'.join(lines), file=f)
+        print(''.join(lines), file=f)
 
 
 if __name__ == '__main__':
