@@ -85,8 +85,27 @@ class KompasTempoDataset(Dataset):
         return set(self.char2id.keys())
 
     def __getitem__(self, index):
-        onehots = self._onehot_data[index]
-        return onehots[:-1], onehots[1:]
+        return self._onehot_data[index]
 
     def __len__(self):
         return len(self._onehot_data)
+
+
+def collate_batch(batch):
+    # Sort descending by sequence lengths
+    batch = sorted(batch, key=lambda b: b.size()[0], reverse=True)
+    seq_lens = [b.size()[0] - 1 for b in batch]
+    max_seq_len = max(seq_lens)
+    dim = batch[0].size()[1]
+
+    inputs, targets = [], []
+    for b, seq_len in zip(batch, seq_lens):
+        # Pad inputs and targets with zeros
+        padded_inputs = torch.zeros(max_seq_len, dim)
+        padded_targets = torch.zeros(max_seq_len, dim)
+        padded_inputs[:seq_len] = b[:-1]
+        padded_targets[:seq_len] = b[1:]
+        inputs.append(padded_inputs)
+        targets.append(padded_targets)
+
+    return torch.stack(inputs), torch.stack(targets), seq_lens
