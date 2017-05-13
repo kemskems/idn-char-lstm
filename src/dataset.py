@@ -1,3 +1,4 @@
+from collections import defaultdict
 from itertools import islice
 import os
 import re
@@ -33,22 +34,45 @@ class KompasTempo:
 
 
 class KompasTempoDataset(Dataset):
-    def __init__(self, iterator):
+    def __init__(self, iterator, min_count=5):
         self.iterator = iterator
+        self.min_count = min_count
 
-    def build_vocab(self):
-        self._vocab = {}
-        self._data = []
+        self._build_vocab()
+        self._convert_data_to_ids()
+
+    def _build_vocab(self):
+        self.char2id, self.id2char, self._freq = {}, {}, defaultdict(int)
+        charss = []
         for line in self.iterator:
-            self._data = self._to_chars(line)
-            for c in self._data:
-                self._vocab.add(c)
+            charss.append(self._to_chars(line))
+            for c in charss[-1]:
+                self._freq[c] += 1
+
+        self._data = []
+        for chars in charss:
+            # Set rare chars (fewer than `min_count` occurrences) to <UNK>
+            self._data.append(['<UNK>' if self._freq[c] < self.min_count else c
+                               for c in chars])
+            # Map chars to ids and vice versa
+            for c in self._data[-1]:
+                if c not in self.char2id:
+                    cnt = len(self.char2id)
+                    self.char2id[c] = cnt
+                    self.id2char[cnt] = c
 
     def _to_chars(self, line):
         res = ['<s>']
         res.extend(line)
         res.append('</s>')
         return res
+
+    def _convert_data_to_ids(self):
+        self._data = [[self.char2id[c] for c in line] for line in self._data]
+
+    @property
+    def vocab(self):
+        return set(self.char2id.keys())
 
     def __getitem__(self, index):
         chars = self._data[index]
