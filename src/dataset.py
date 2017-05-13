@@ -77,7 +77,7 @@ class KompasTempoDataset(Dataset):
 
     def _onehot_encode(self, ids):
         ids = torch.LongTensor(ids).view(-1, 1)
-        onehot = torch.zeros(ids.size()[0], len(self.vocab))
+        onehot = torch.zeros(ids.size(0), len(self.vocab))
         return onehot.scatter_(1, ids, 1)
 
     @property
@@ -93,10 +93,10 @@ class KompasTempoDataset(Dataset):
 
 def collate_batch(batch):
     # Sort descending by sequence lengths
-    batch = sorted(batch, key=lambda b: b.size()[0], reverse=True)
-    seq_lens = [b.size()[0] - 1 for b in batch]
+    batch = sorted(batch, key=lambda b: b.size(0), reverse=True)
+    seq_lens = [b.size(0) - 1 for b in batch]
     max_seq_len = max(seq_lens)
-    dim = batch[0].size()[1]
+    dim = batch[0].size(1)
 
     inputs, targets = [], []
     for b, seq_len in zip(batch, seq_lens):
@@ -108,4 +108,4 @@ def collate_batch(batch):
         inputs.append(padded_inputs)
         targets.append(padded_targets)
 
-    return torch.stack(inputs), torch.stack(targets), seq_lens
+    return torch.stack(inputs, 1), torch.stack(targets, 1), seq_lens
