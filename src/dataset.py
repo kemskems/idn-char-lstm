@@ -34,14 +34,25 @@ class KompasTempo:
 
 class KompasTempoDataset(Dataset):
     def __init__(self, iterator):
-        self.lines = list(iterator)
+        self.iterator = iterator
+
+    def build_vocab(self):
+        self._vocab = {}
+        self._data = []
+        for line in self.iterator:
+            self._data = self._to_chars(line)
+            for c in self._data:
+                self._vocab.add(c)
 
     def _to_chars(self, line):
-        return ['<s>'] + list(line) + ['</s>']
+        res = ['<s>']
+        res.extend(line)
+        res.append('</s>')
+        return res
 
     def __getitem__(self, index):
-        chars = self._to_chars(self.lines[index])
+        chars = self._data[index]
         return chars[:-1], chars[1:]
 
     def __len__(self):
-        return len(self.lines)
+        return len(self._data)
