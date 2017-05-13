@@ -3,6 +3,7 @@ from itertools import islice
 import os
 import re
 
+import torch
 from torch.utils.data import Dataset
 
 
@@ -40,6 +41,7 @@ class KompasTempoDataset(Dataset):
 
         self._build_vocab()
         self._convert_data_to_ids()
+        self._convert_data_to_onehot_encoding()
 
     def _build_vocab(self):
         self.char2id, self.id2char, self._freq = {}, {}, defaultdict(int)
@@ -68,15 +70,23 @@ class KompasTempoDataset(Dataset):
         return res
 
     def _convert_data_to_ids(self):
-        self._data = [[self.char2id[c] for c in line] for line in self._data]
+        self._data = [[self.char2id[c] for c in chars] for chars in self._data]
+
+    def _convert_data_to_onehot_encoding(self):
+        self._onehot_data = [self._onehot_encode(cids) for cids in self._data]
+
+    def _onehot_encode(self, ids):
+        ids = torch.LongTensor(ids).view(-1, 1)
+        onehot = torch.zeros(ids.size()[0], len(self.vocab))
+        return onehot.scatter_(1, ids, 1)
 
     @property
     def vocab(self):
         return set(self.char2id.keys())
 
     def __getitem__(self, index):
-        chars = self._data[index]
-        return chars[:-1], chars[1:]
+        onehots = self._onehot_data[index]
+        return onehots[:-1], onehots[1:]
 
     def __len__(self):
-        return len(self._data)
+        return len(self._onehot_data)
