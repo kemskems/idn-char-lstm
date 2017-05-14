@@ -84,6 +84,9 @@ class KompasTempoDataset(Dataset):
     def vocab(self):
         return set(self.char2id.keys())
 
+    def cuda(self):
+        self._onehot_data = [onehot.cuda() for onehot in self._onehot_data]
+
     def __getitem__(self, index):
         return self._onehot_data[index]
 
@@ -101,8 +104,8 @@ def collate_batch(batch):
     inputs, targets = [], []
     for b, seq_len in zip(batch, seq_lens):
         # Pad inputs and targets with zeros
-        padded_inputs = torch.zeros(max_seq_len, dim)
-        padded_targets = torch.zeros(max_seq_len, dim)
+        padded_inputs = b.new(max_seq_len, dim).zero_()
+        padded_targets = b.new(max_seq_len, dim).zero_()
         padded_inputs[:seq_len] = b[:-1]
         padded_targets[:seq_len] = b[1:]
         inputs.append(padded_inputs)
