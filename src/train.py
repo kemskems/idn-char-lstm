@@ -2,6 +2,7 @@ import math
 import time
 
 from torch.autograd import Variable
+import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm
 
 from src.utils import MeanAggregate
@@ -18,7 +19,7 @@ def train(loader, model, criterion, optimizer, report_interval=100, epoch=1, gra
         batch_start_time = time.time()
         inputs, targets = Variable(inputs), Variable(targets)
         init_states = model.init_states(loader.batch_size)
-        outputs = model(inputs, init_states, seq_lens=seq_lens)
+        outputs, _ = model(inputs, init_states, seq_lens=seq_lens)
         batch_loss = criterion(outputs, targets)
         batch_ppl = math.exp(batch_loss.data[0])
         optimizer.zero_grad()
@@ -48,9 +49,15 @@ def evaluate(loader, model, criterion):
     for inputs, targets, seq_lens in loader:
         inputs, targets = Variable(inputs, volatile=True), Variable(targets, volatile=True)
         init_states = model.init_states(loader.batch_size)
-        outputs = model(inputs, init_states, seq_lens=seq_lens)
+        outputs, _ = model(inputs, init_states, seq_lens=seq_lens)
         batch_loss = criterion(outputs, targets)
         batch_ppl = math.exp(batch_loss.data[0])
         loss.update(batch_loss.data[0])
         ppl.update(batch_ppl)
     return loss.mean, ppl.mean
+
+
+def cross_entropy_loss(outputs, targets):
+    outputs, targets = outputs.view(-1, outputs.size(2)), targets.view(-1)
+    index = Variable((targets.data != -1).nonzero().squeeze())
+    return F.cross_entropy(outputs.index_select(0, index), targets.index_select(0, index))

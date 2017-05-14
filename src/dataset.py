@@ -96,11 +96,11 @@ def collate_batch(vocab_size, batch):
     for b, seq_len in zip(batch, seq_lens):
         batch_inputs, batch_targets = b[:-1], b[1:]
         # Convert inputs to onehot encoding
-        onehot = b.new(seq_len, vocab_size).double().zero_()
+        onehot = b.new(seq_len, vocab_size).float().zero_()
         onehot.scatter_(1, batch_inputs.view(-1, 1), 1)
         # Pad inputs and targets
-        padded_inputs = b.new(max_seq_len, vocab_size).double().fill_(-1)
-        padded_targets = b.new(max_seq_len).double().fill_(-1)
+        padded_inputs = b.new(max_seq_len, vocab_size).float().fill_(-1)
+        padded_targets = b.new(max_seq_len).fill_(-1)
         padded_inputs[:seq_len] = onehot
         padded_targets[:seq_len] = batch_targets
         inputs.append(padded_inputs)

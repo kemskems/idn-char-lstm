@@ -23,7 +23,7 @@ class CharLSTM(nn.Module):
         else:
             packed = pack_padded_sequence(inputs, seq_lens)
             outputs, states = self.lstm(packed, init_states)
-            outputs = pad_packed_sequence(outputs)
+            outputs, _ = pad_packed_sequence(outputs)
 
         unsoftmax = self.linear(outputs.view(-1, outputs.size(2)))
         return unsoftmax.view(-1, outputs.size(1), unsoftmax.size(1)), states
