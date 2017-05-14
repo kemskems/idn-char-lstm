@@ -41,7 +41,6 @@ class KompasTempoDataset(Dataset):
 
         self._build_vocab()
         self._convert_data_to_ids()
-        self._convert_data_to_onehot_encoding()
 
     def _build_vocab(self):
         self.char2id, self.id2char, self._freq = {}, {}, defaultdict(int)
@@ -70,44 +69,40 @@ class KompasTempoDataset(Dataset):
         return res
 
     def _convert_data_to_ids(self):
-        self._data = [[self.char2id[c] for c in chars] for chars in self._data]
-
-    def _convert_data_to_onehot_encoding(self):
-        self._onehot_data = [self._onehot_encode(cids) for cids in self._data]
-
-    def _onehot_encode(self, ids):
-        ids = torch.LongTensor(ids).view(-1, 1)
-        onehot = torch.zeros(ids.size(0), len(self.vocab))
-        return onehot.scatter_(1, ids, 1)
+        self._data = [torch.LongTensor([self.char2id[c] for c in chars])
+                      for chars in self._data]
 
     @property
     def vocab(self):
         return set(self.char2id.keys())
 
     def cuda(self):
-        self._onehot_data = [onehot.cuda() for onehot in self._onehot_data]
+        self._data = [cids.cuda() for cids in self._data]
 
     def __getitem__(self, index):
-        return self._onehot_data[index]
+        return self._data[index]
 
     def __len__(self):
-        return len(self._onehot_data)
+        return len(self._data)
 
 
-def collate_batch(batch):
+def collate_batch(vocab_size, batch):
     # Sort descending by sequence lengths
     batch = sorted(batch, key=lambda b: b.size(0), reverse=True)
     seq_lens = [b.size(0) - 1 for b in batch]
     max_seq_len = max(seq_lens)
-    dim = batch[0].size(1)
 
     inputs, targets = [], []
     for b, seq_len in zip(batch, seq_lens):
-        # Pad inputs and targets with zeros
-        padded_inputs = b.new(max_seq_len, dim).zero_()
-        padded_targets = b.new(max_seq_len, dim).zero_()
-        padded_inputs[:seq_len] = b[:-1]
-        padded_targets[:seq_len] = b[1:]
+        batch_inputs, batch_targets = b[:-1], b[1:]
+        # Convert inputs to onehot encoding
+        onehot = b.new(seq_len, vocab_size).double().zero_()
+        onehot.scatter_(1, batch_inputs.view(-1, 1), 1)
+        # Pad inputs and targets
+        padded_inputs = b.new(max_seq_len, vocab_size).double().fill_(-1)
+        padded_targets = b.new(max_seq_len).double().fill_(-1)
+        padded_inputs[:seq_len] = onehot
+        padded_targets[:seq_len] = batch_targets
         inputs.append(padded_inputs)
         targets.append(padded_targets)
 
