@@ -35,8 +35,8 @@ def train(loader, model, criterion, optimizer, report_interval=100, epoch=1, gra
 
         if (k + 1) % report_interval == 0:
             print(f'Epoch {epoch} [{k+1}/{len(loader)}]:', end=' ')
-            print(f'runtime={runtime.mean*1000:.2f}ms speed={speed.mean:.2f}smpl/s', end=' ')
-            print(f'loss={loss.mean:.4f} ppl={ppl.mean:.4f}')
+            print(f'loss {loss.mean:.4f} | ppl {ppl.mean:.4f}', end=' | ')
+            print(f'{runtime.mean*1000:.2f}ms | {speed.mean:.2f} samples/s')
 
     print(f'Epoch {epoch} done in {runtime.total:.2f}s')
     return loss.mean, ppl.mean
