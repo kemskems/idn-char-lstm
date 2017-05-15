@@ -16,20 +16,29 @@ from src.utils import augment_parser, dump_args, load_args
 def main(train_loader, valid_loader, model, criterion, optimizer, num_epochs=5, grad_clip=5.,
          log_interval=20, eval_interval=1, gen_interval=None, gen_max_length=200, num_gens=3,
          tol=1.0e-4, save_to=None):
-    print('Evaluating epoch 0...')
+    print('\nEvaluating epoch 0...')
     init_loss, init_ppl = evaluate(train_loader, model, criterion)
-    print(f'Epoch 0: loss={init_loss:.4f} ppl={init_ppl:.4f}')
+    print(f'Epoch 0: loss {init_loss:.4f} | ppl {init_ppl:.4f}')
+    if gen_interval is not None:
+        print('Generating samples...')
+        for k in range(num_gens):
+            print(f'Epoch 0 gen {k}:', end=' ')
+            print(generate(model, train_loader.dataset,
+                           start_ch=train_loader.dataset.START_TOKEN,
+                           max_length=gen_max_length))
 
-    print(f'Training on {len(train_loader)} batches...')
+    print(f'\nTraining on {len(train_loader)} batches...')
     best_ppl = math.inf
     start_time = time.time()
     for e in range(num_epochs):
-        train(train_loader, model, criterion, optimizer, log_interval=log_interval,
-              epoch=e+1, grad_clip=grad_clip)
+        print()
+        tr_loss, tr_ppl = train(train_loader, model, criterion, optimizer,
+                                log_interval=log_interval, epoch=e+1, grad_clip=grad_clip)
+        print(f'Epoch {e+1}: loss {tr_loss:.4f} | ppl {tr_ppl:.4f}')
         if (e + 1) % eval_interval == 0:
             print('Evaluating on validation data...')
             val_loss, val_ppl = evaluate(valid_loader, model, criterion)
-            print(f'val_loss={val_loss:.4f} val_ppl={val_ppl:.4f}')
+            print(f'Epoch {e+1}: valid loss {val_loss:.4f} | valid ppl {val_ppl:.4f}')
             if val_ppl < best_ppl - tol:
                 print(f'Found new best ppl (last was {best_ppl:.4f})')
                 best_ppl = val_ppl
@@ -39,12 +48,12 @@ def main(train_loader, valid_loader, model, criterion, optimizer, num_epochs=5, 
         if gen_interval is not None and (e + 1) % gen_interval == 0:
             print('Generating samples...')
             for k in range(num_gens):
-                print(f'Generation {k}:', end=' ')
+                print(f'Epoch {e+1} gen {k}:', end=' ')
                 print(generate(model, train_loader.dataset,
                                start_ch=train_loader.dataset.START_TOKEN,
                                max_length=gen_max_length))
     end_time = time.time()
-    print(f'Done training in {end_time-start_time:.2f}s')
+    print(f'\nDone training in {end_time-start_time:.2f}s')
 
     return best_ppl
 
@@ -84,7 +93,7 @@ if __name__ == '__main__':
                               'cuda', 'load_from'])
     load_args(args)
 
-    print('Loading dataset...')
+    print('Loading dataset...', end=' ')
     start_time = time.time()
     train_source = KompasTempo(which='train', max_sentences=args.train_max_sents)
     valid_source = KompasTempo(which='valid', max_sentences=args.valid_max_sents)
@@ -92,8 +101,9 @@ if __name__ == '__main__':
     valid_dataset = CharLanguageModelDataset(valid_source, char2id=(train_dataset.char2id,
                                                                     train_dataset.id2char))
     vocab_size = len(train_dataset.vocab)
-    print(f'Done loading dataset in {time.time()-start_time:.2f}s')
+    print(f'done ({time.time()-start_time:.2f}s)')
     print(f'Vocab size: {vocab_size}')
+    print(f'Number of characters (train): {train_dataset.num_chars}')
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,
@@ -103,6 +113,8 @@ if __name__ == '__main__':
         collate_fn=partial(collate_batch, vocab_size))
     model = CharLSTM(vocab_size, args.hidden_size, num_layers=args.num_layers,
                      dropout=args.dropout)
+    num_params = sum(param.numel() for param in model.parameters())
+    print(f'Number of model parameters: {num_params}')
     if args.load_from is not None:
         model.load_state_dict(torch.load(args.load_from))
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
