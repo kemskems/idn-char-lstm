@@ -34,43 +34,59 @@ class KompasTempo:
         return islice(self._get_iterator(), self.max_sentences)
 
 
-class KompasTempoDataset(Dataset):
-    def __init__(self, iterator, min_count=5):
+class CharLanguageModelDataset(Dataset):
+    def __init__(self, iterator, min_count=5, char2id=None):
         self.iterator = iterator
         self.min_count = min_count
+        if char2id is None:
+            self.char2id = None
+        elif isinstance(char2id, dict):
+            self.char2id = char2id
+            self.id2char = {v: k for k, v in char2id.items()}
+        else:
+            self.char2id, self.id2char = char2id
 
-        self._build_vocab()
+        self._tokenize_chars()
+        if self.char2id is None:
+            self._build_vocab()
         self._convert_data_to_ids()
+
+    def _tokenize_chars(self):
+        self._data = []
+        for line in self.iterator:
+            self._data.append(self._to_chars(line))
 
     def _build_vocab(self):
         self.char2id, self.id2char, self._freq = {}, {}, defaultdict(int)
-        charss = []
-        for line in self.iterator:
-            charss.append(self._to_chars(line))
-            for c in charss[-1]:
-                self._freq[c] += 1
 
-        self._data = []
-        for chars in charss:
-            # Set rare chars (fewer than `min_count` occurrences) to <UNK>
-            self._data.append(['<UNK>' if self._freq[c] < self.min_count else c
-                               for c in chars])
-            # Map chars to ids and vice versa
-            for c in self._data[-1]:
-                if c not in self.char2id:
-                    cnt = len(self.char2id)
-                    self.char2id[c] = cnt
-                    self.id2char[cnt] = c
+        for chars in self._data:
+            for ch in chars:
+                self._freq[ch] += 1
 
-    def _to_chars(self, line):
+        # Always have UNK token
+        self.char2id['<UNK>'] = 0
+        self.id2char[0] = '<UNK>'
+
+        for ch, cnt in self._freq.items():
+            ch = '<UNK>' if cnt < self.min_count else ch
+            if ch not in self.char2id:
+                size = len(self.char2id)
+                self.char2id[ch] = size
+                self.id2char[size] = ch
+
+    def _convert_data_to_ids(self):
+        unk_id = self.char2id['<UNK>']
+        self._data = [
+            torch.LongTensor([self.char2id.get(ch, unk_id) for ch in chars])
+            for chars in self._data
+        ]
+
+    @staticmethod
+    def _to_chars(line):
         res = ['<s>']
         res.extend(line)
         res.append('</s>')
         return res
-
-    def _convert_data_to_ids(self):
-        self._data = [torch.LongTensor([self.char2id[c] for c in chars])
-                      for chars in self._data]
 
     @property
     def vocab(self):
