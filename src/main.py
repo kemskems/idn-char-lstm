@@ -42,15 +42,13 @@ def main(train_loader, valid_loader, model, criterion, optimizer, num_epochs=20,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train character language model with LSTM')
-    parser.add_argument('--train-corpus', required=True, help='path to training corpus file')
-    parser.add_argument('--valid-corpus', required=True, help='path to validation corpus file')
     parser.add_argument('--train-max-sents', type=int, help='max sentences for training')
     parser.add_argument('--valid-max-sents', type=int, help='max sentences for validation')
     parser.add_argument('--min-count', type=int, default=5,
                         help='threshold count for rare words')
     parser.add_argument('--batch-size', type=int, default=128, help='batch size')
     parser.add_argument('--hidden-size', type=int, default=50,
-                        help='size of hidden units in LSTM')
+                        help='number of hidden units in the model')
     parser.add_argument('--num-layers', type=int, default=1, help='number of LSTM layers')
     parser.add_argument('--dropout', type=float, default=0.3, help='dropout probability')
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
@@ -68,8 +66,8 @@ if __name__ == '__main__':
     augment_parser(parser)
     args = parser.parse_args()
 
-    dump_args(args, excludes=['train_corpus', 'valid_corpus', 'num_epochs', 'log_interval',
-                              'eval_interval', 'save_to', 'cuda', 'load_from'])
+    dump_args(args, excludes=['num_epochs', 'log_interval', 'eval_interval', 'save_to',
+                              'cuda', 'load_from'])
     load_args(args)
 
     print('Loading dataset...')
