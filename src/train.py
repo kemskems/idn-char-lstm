@@ -18,7 +18,7 @@ def train(loader, model, criterion, optimizer, log_interval=100, epoch=1, grad_c
     for k, (inputs, targets, seq_lens) in enumerate(loader):
         batch_start_time = time.time()
         inputs, targets = Variable(inputs), Variable(targets)
-        init_states = model.init_states(loader.batch_size)
+        init_states = model.init_states(inputs.size(1))
         outputs, _ = model(inputs, init_states, seq_lens=seq_lens)
         batch_loss = criterion(outputs, targets)
         batch_ppl = math.exp(batch_loss.data[0])
@@ -48,7 +48,7 @@ def evaluate(loader, model, criterion):
     ppl = MeanAggregate()
     for inputs, targets, seq_lens in loader:
         inputs, targets = Variable(inputs, volatile=True), Variable(targets, volatile=True)
-        init_states = model.init_states(loader.batch_size)
+        init_states = model.init_states(inputs.size(1))
         outputs, _ = model(inputs, init_states, seq_lens=seq_lens)
         batch_loss = criterion(outputs, targets)
         batch_ppl = math.exp(batch_loss.data[0])
