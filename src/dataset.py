@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 class KompasTempo:
     def __init__(self, data_dir=os.path.join(os.getenv('DATA_DIR'), 'input'),
-                 which='train', max_sentences=None, remove_duplicate_spaces=False,
+                 which='train', max_sentences=None, remove_duplicate_spaces=True,
                  remove_empty_lines=True):
         self.data_dir = data_dir
         self.which = which
@@ -35,6 +35,10 @@ class KompasTempo:
 
 
 class CharLanguageModelDataset(Dataset):
+    START_TOKEN = '<s>'
+    END_TOKEN = '</s>'
+    UNK_TOKEN = '<UNK>'
+
     def __init__(self, iterator, min_count=5, char2id=None):
         self.iterator = iterator
         self.min_count = min_count
@@ -64,28 +68,28 @@ class CharLanguageModelDataset(Dataset):
                 self._freq[ch] += 1
 
         # Always have UNK token
-        self.char2id['<UNK>'] = 0
-        self.id2char[0] = '<UNK>'
+        self.char2id[self.UNK_TOKEN] = 0
+        self.id2char[0] = self.UNK_TOKEN
 
         for ch, cnt in self._freq.items():
-            ch = '<UNK>' if cnt < self.min_count else ch
+            ch = self.UNK_TOKEN if cnt < self.min_count else ch
             if ch not in self.char2id:
                 size = len(self.char2id)
                 self.char2id[ch] = size
                 self.id2char[size] = ch
 
     def _convert_data_to_ids(self):
-        unk_id = self.char2id['<UNK>']
+        unk_id = self.char2id[self.UNK_TOKEN]
         self._data = [
             torch.LongTensor([self.char2id.get(ch, unk_id) for ch in chars])
             for chars in self._data
         ]
 
-    @staticmethod
-    def _to_chars(line):
-        res = ['<s>']
+    @classmethod
+    def _to_chars(cls, line):
+        res = [cls.START_TOKEN]
         res.extend(line)
-        res.append('</s>')
+        res.append(cls.END_TOKEN)
         return res
 
     @property
