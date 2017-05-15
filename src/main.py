@@ -93,7 +93,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     dump_args(args, excludes=['num_epochs', 'log_interval', 'eval_interval', 'save_to',
-                              'cuda', 'load_from'])
+                              'save_vocab', 'cuda', 'load_from'])
     load_args(args)
     torch.manual_seed(args.seed)
 
