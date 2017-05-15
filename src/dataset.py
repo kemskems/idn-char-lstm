@@ -96,6 +96,10 @@ class CharLanguageModelDataset(Dataset):
     def vocab(self):
         return set(self.char2id.keys())
 
+    @property
+    def num_chars(self):
+        return sum(cids.numel() for cids in self._data)
+
     def cuda(self):
         self._data = [cids.cuda() for cids in self._data]
 
