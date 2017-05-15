@@ -69,7 +69,7 @@ if __name__ == '__main__':
                         help='number of hidden units in the model')
     parser.add_argument('--num-layers', type=int, default=1, help='number of LSTM layers')
     parser.add_argument('--dropout', type=float, default=0.3, help='dropout probability')
-    parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
+    parser.add_argument('--lr', type=float, default=1.0e-3, help='learning rate')
     parser.add_argument('--num-epochs', type=int, default=20, help='number of epochs to train')
     parser.add_argument('--grad-clip', type=float, default=5.,
                         help='gradients will be clipped at this value')
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     print(f'Number of model parameters: {num_params}')
     if args.load_from is not None:
         model.load_state_dict(torch.load(args.load_from))
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     if args.cuda and torch.cuda.is_available():
         print('CUDA is enabled and available, GPU will be used', file=sys.stderr)
