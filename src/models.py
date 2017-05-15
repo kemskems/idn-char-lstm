@@ -5,15 +5,14 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class CharLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, vocab_size, num_layers=1, dropout=0.):
+    def __init__(self, vocab_size, hidden_size, num_layers=1, dropout=0.):
         super().__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
         self.vocab_size = vocab_size
+        self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.dropout = dropout
 
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=num_layers, bias=True,
+        self.lstm = nn.LSTM(vocab_size, hidden_size, num_layers=num_layers, bias=True,
                             dropout=dropout, bidirectional=False)
         self.linear = nn.Linear(hidden_size, vocab_size)
 
