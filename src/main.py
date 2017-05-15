@@ -97,6 +97,7 @@ if __name__ == '__main__':
 
     if args.cuda and torch.cuda.is_available():
         print('CUDA is enabled and available, GPU will be used', file=sys.stderr)
+        torch.backends.cudnn.benchmark = True
         train_dataset.cuda()
         valid_dataset.cuda()
         model.cuda()
