@@ -26,18 +26,18 @@ def generate(model, dataset, start_ch=None, max_length=200):
     onehot = weight.new(1, vocab_size).zero_()
     res = [start_ch]
     states = model.init_states(1)
-    while len(res) <= max_length:
+    while len(res) <= max_length and res[-1] != dataset.END_TOKEN:
         onehot = onehot.zero_()
         onehot.scatter_(1, weight.new(1, 1).long().fill_(char2id[res[-1]]), 1)
         inputs = Variable(onehot.unsqueeze(1), volatile=True)
         outputs, states = model(inputs, states)
         probs = F.softmax(outputs.view(1, -1)).data.squeeze()
         next_ch = id2char[torch.multinomial(probs, 1)[0]]
-        if next_ch == dataset.END_TOKEN:
-            break
         res.append(next_ch)
 
-    return ''.join([ch for ch in res[1:] if ch != dataset.UNK_TOKEN])
+    res = ''.join([ch for ch in res[1:-1]
+                   if ch not in [dataset.UNK_TOKEN, dataset.START_TOKEN]])
+    return f'{dataset.START_TOKEN}{res}{dataset.END_TOKEN}'
 
 
 if __name__ == '__main__':
