@@ -7,13 +7,15 @@ import time
 import torch
 
 from src.dataset import KompasTempo, CharLanguageModelDataset, collate_batch
+from src.generation import generate
 from src.models import CharLSTM
 from src.train import train, evaluate, cross_entropy_loss
 from src.utils import augment_parser, dump_args, load_args
 
 
-def main(train_loader, valid_loader, model, criterion, optimizer, num_epochs=20, grad_clip=5.,
-         log_interval=100, eval_interval=2, tol=1.0e-4, save_to=None):
+def main(train_loader, valid_loader, model, criterion, optimizer, num_epochs=5, grad_clip=5.,
+         log_interval=20, eval_interval=1, gen_interval=None, gen_max_length=200, num_gens=3,
+         tol=1.0e-4, save_to=None):
     print('Evaluating epoch 0...')
     init_loss, init_ppl = evaluate(train_loader, model, criterion)
     print(f'Epoch 0: loss={init_loss:.4f} ppl={init_ppl:.4f}')
@@ -34,6 +36,13 @@ def main(train_loader, valid_loader, model, criterion, optimizer, num_epochs=20,
                 if save_to is not None:
                     torch.save(model.state_dict(), save_to)
                     print(f'Model parameters are saved to {save_to}')
+        if gen_interval is not None and (e + 1) % gen_interval == 0:
+            print('Generating samples...')
+            for k in range(num_gens):
+                print(f'Generation {k}:', end=' ')
+                print(generate(model, train_loader.dataset,
+                               start_ch=train_loader.dataset.START_TOKEN,
+                               max_length=gen_max_length))
     end_time = time.time()
     print(f'Done training in {end_time-start_time:.2f}s')
 
@@ -59,6 +68,11 @@ if __name__ == '__main__':
                         help='log will be printed every this interval of batch')
     parser.add_argument('--eval-interval', type=int, default=2,
                         help='validation loss will be computed every this interval of epoch')
+    parser.add_argument('--gen-interval', type=int,
+                        help='samples will be generated every this interval of epoch')
+    parser.add_argument('--gen-max-length', type=int, default=200,
+                        help='max length of generated samples')
+    parser.add_argument('--num-gens', type=int, default=3, help='number of generated samples')
     parser.add_argument('--tol', type=float, default=1.0e-4, help='floating point tolerance')
     parser.add_argument('--save-to', help='path to which the model state will be saved')
     parser.add_argument('--cuda', action='store_true', help='use GPU if available')
@@ -104,7 +118,8 @@ if __name__ == '__main__':
         best_ppl = main(train_loader, valid_loader, model, cross_entropy_loss, optimizer,
                         num_epochs=args.num_epochs, grad_clip=args.grad_clip,
                         log_interval=args.log_interval, eval_interval=args.eval_interval,
-                        tol=args.tol, save_to=args.save_to)
+                        gen_interval=args.gen_interval, gen_max_length=args.gen_max_length,
+                        num_gens=args.num_gens, tol=args.tol, save_to=args.save_to)
     except KeyboardInterrupt:
         print('Training is stopped early. Exiting...')
     else:
