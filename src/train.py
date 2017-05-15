@@ -8,7 +8,7 @@ from torch.nn.utils import clip_grad_norm
 from src.utils import MeanAggregate
 
 
-def train(loader, model, criterion, optimizer, report_interval=100, epoch=1, grad_clip=5.):
+def train(loader, model, criterion, optimizer, log_interval=100, epoch=1, grad_clip=5.):
     model.train()
     loss = MeanAggregate()
     runtime = MeanAggregate()
@@ -33,7 +33,7 @@ def train(loader, model, criterion, optimizer, report_interval=100, epoch=1, gra
         ppl.update(batch_ppl)
         speed.update(loader.batch_size/batch_runtime)
 
-        if (k + 1) % report_interval == 0:
+        if (k + 1) % log_interval == 0:
             print(f'Epoch {epoch} [{k+1}/{len(loader)}]:', end=' ')
             print(f'loss {loss.mean:.4f} | ppl {ppl.mean:.4f}', end=' | ')
             print(f'{runtime.mean*1000:.2f}ms | {speed.mean:.2f} samples/s')
