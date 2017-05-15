@@ -4,6 +4,7 @@ data/working/*
 !data/working/.gitkeep
 data/output/*
 !data/output/.gitkeep
+notes.org
 
 # Created by https://www.gitignore.io/api/python
 
