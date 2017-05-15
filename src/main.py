@@ -1,6 +1,7 @@
 import argparse
 from functools import partial
 import math
+import pickle
 import sys
 import time
 
@@ -84,14 +85,17 @@ if __name__ == '__main__':
     parser.add_argument('--num-gens', type=int, default=3, help='number of generated samples')
     parser.add_argument('--tol', type=float, default=1.0e-4, help='floating point tolerance')
     parser.add_argument('--save-to', help='path to which the model state will be saved')
+    parser.add_argument('--save-vocab', help='path to which the vocab will be saved')
     parser.add_argument('--cuda', action='store_true', help='use GPU if available')
     parser.add_argument('--load-from', help='path to model state file to be loaded')
+    parser.add_argument('--seed', type=int, default=12345, help='random seed')
     augment_parser(parser)
     args = parser.parse_args()
 
     dump_args(args, excludes=['num_epochs', 'log_interval', 'eval_interval', 'save_to',
                               'cuda', 'load_from'])
     load_args(args)
+    torch.manual_seed(args.seed)
 
     print('Loading dataset...', end=' ')
     start_time = time.time()
@@ -102,6 +106,10 @@ if __name__ == '__main__':
                                                                     train_dataset.id2char))
     vocab_size = len(train_dataset.vocab)
     print(f'done ({time.time()-start_time:.2f}s)')
+    if args.save_vocab is not None:
+        with open(args.save_vocab, 'wb') as f:
+            pickle.dump(train_dataset.char2id, f)
+        print(f'Vocab is saved to {args.save_vocab}')
     print(f'Vocab size: {vocab_size}')
     print(f'Number of characters (train): {train_dataset.num_chars}')
 
@@ -122,6 +130,7 @@ if __name__ == '__main__':
     if args.cuda and torch.cuda.is_available():
         print('CUDA is enabled and available, GPU will be used', file=sys.stderr)
         torch.backends.cudnn.benchmark = True
+        torch.cuda.manual_seed(args.seed)
         train_dataset.cuda()
         valid_dataset.cuda()
         model.cuda()
