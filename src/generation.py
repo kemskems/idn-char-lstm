@@ -1,4 +1,5 @@
 import argparse
+import math
 
 import torch
 from torch.autograd import Variable
@@ -8,9 +9,11 @@ from src.dataset import KompasTempo, CharLanguageModelDataset
 from src.models import CharLSTM
 
 
-def generate(model, dataset, prime_text=None, max_length=200):
+def generate(model, dataset, prime_text=None, max_length=None):
     if prime_text is None:
         prime_text = [dataset.START_TOKEN]
+    if max_length is None:
+        max_length = math.inf
 
     if model.vocab_size != len(dataset.vocab):
         raise ValueError(
