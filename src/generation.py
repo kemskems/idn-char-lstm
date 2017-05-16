@@ -8,25 +8,37 @@ from src.dataset import KompasTempo, CharLanguageModelDataset
 from src.models import CharLSTM
 
 
-def generate(model, dataset, start_ch=None, max_length=200):
+def generate(model, dataset, prime_text=None, max_length=200):
+    if prime_text is None:
+        prime_text = [dataset.START_TOKEN]
+
     if model.vocab_size != len(dataset.vocab):
         raise ValueError(
             f"Model's vocab size does not equal dataset's"
             " ({model.vocab_size} != {len(dataset.vocab_size)})")
-    if start_ch is not None and start_ch not in dataset.vocab:
-        raise ValueError(f"Character '{start_ch}' is not in the vocabulary")
-
-    if start_ch is None:
-        start_ch = dataset.START_TOKEN
+    for ch in prime_text:
+        if ch not in dataset.vocab:
+            raise ValueError(f"Character '{ch}' is not in the vocabulary")
 
     char2id = dataset.char2id
     id2char = dataset.id2char
     vocab_size = len(char2id)
     weight = next(model.parameters()).data
-    onehot = weight.new(1, vocab_size).zero_()
-    res = [start_ch]
+    res = []
+
+    # Priming the model
+    ptids = [char2id[ch] for ch in prime_text]
+    onehot = weight.new(len(prime_text), vocab_size).zero_()
+    onehot.scatter_(1, weight.new(ptids).long().view(-1, 1), 1)
+    inputs = Variable(onehot.unsqueeze(1), volatile=True)
     states = model.init_states(1)
-    while len(res) <= max_length and res[-1] != dataset.END_TOKEN:
+    outputs, states = model(inputs, states)
+    probs = F.softmax(outputs[-1]).data.squeeze()
+    next_ch = id2char[torch.multinomial(probs, 1)[0]]
+    res.append(next_ch)
+
+    onehot = weight.new(1, vocab_size)
+    while len(res) < max_length and res[-1] != dataset.END_TOKEN:
         onehot = onehot.zero_()
         onehot.scatter_(1, weight.new(1, 1).long().fill_(char2id[res[-1]]), 1)
         inputs = Variable(onehot.unsqueeze(1), volatile=True)
@@ -34,10 +46,11 @@ def generate(model, dataset, start_ch=None, max_length=200):
         probs = F.softmax(outputs.view(1, -1)).data.squeeze()
         next_ch = id2char[torch.multinomial(probs, 1)[0]]
         res.append(next_ch)
+    if res[-1] == dataset.END_TOKEN:
+        del res[-1]
 
-    res = ''.join([ch for ch in res[1:-1]
-                   if ch not in [dataset.UNK_TOKEN, dataset.START_TOKEN]])
-    return f'{dataset.START_TOKEN}{res}{dataset.END_TOKEN}'
+    res = [ch for ch in res if ch not in [dataset.UNK_TOKEN, dataset.START_TOKEN]]
+    return prime_text + res
 
 
 if __name__ == '__main__':
