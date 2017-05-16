@@ -65,13 +65,14 @@ if __name__ == '__main__':
     parser.add_argument('--hidden-size', type=int, default=50,
                         help='number of hidden units in the model')
     parser.add_argument('--num-layers', type=int, default=1, help='number of LSTM layers')
-    parser.add_argument('--start-char', help='starting character')
-    parser.add_argument('--max-length', type=int, default=200,
+    parser.add_argument('--prime-text', help='starting text')
+    parser.add_argument('--max-length', type=int,
                         help='max length of the generated text')
     args = parser.parse_args()
 
+    prime_text = list(args.prime_text) if args.prime_text is not None else None
     source = KompasTempo(which='train')
     dataset = CharLanguageModelDataset(source, args.min_count)
     model = CharLSTM(len(dataset.vocab), args.hidden_size, num_layers=args.num_layers)
     model.load_state_dict(torch.load(args.load_from))
-    print(generate(model, dataset, start_ch=args.start_char, max_length=args.max_length))
+    print(generate(model, dataset, prime_text=prime_text, max_length=args.max_length))
