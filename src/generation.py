@@ -74,5 +74,6 @@ if __name__ == '__main__':
     source = KompasTempo(which='train')
     dataset = CharLanguageModelDataset(source, args.min_count)
     model = CharLSTM(len(dataset.vocab), args.hidden_size, num_layers=args.num_layers)
-    model.load_state_dict(torch.load(args.load_from))
-    print(generate(model, dataset, prime_text=prime_text, max_length=args.max_length))
+    model.load_state_dict(torch.load(args.load_from,
+                                     map_location=lambda storage, loc: storage))
+    print(''.join(generate(model, dataset, prime_text=prime_text, max_length=args.max_length)))
