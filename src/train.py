@@ -6,9 +6,11 @@ import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm
 
 from src.utils import MeanAggregate
+from src.generation import generate
 
 
-def train(loader, model, criterion, optimizer, log_interval=100, epoch=1, grad_clip=5.):
+def train(loader, model, criterion, optimizer, log_interval=100, epoch=1, grad_clip=5.,
+          gen_interval=None, gen_max_length=None, num_gens=3):
     model.train()
     loss = MeanAggregate()
     runtime = MeanAggregate()
@@ -37,6 +39,12 @@ def train(loader, model, criterion, optimizer, log_interval=100, epoch=1, grad_c
             print(f'Epoch {epoch} [{k+1}/{len(loader)}]:', end=' ')
             print(f'loss {loss.mean:.4f} | ppl {ppl.mean:.4f}', end=' | ')
             print(f'{runtime.mean*1000:.2f}ms | {speed.mean:.2f} samples/s')
+        if gen_interval is not None and (k + 1) % gen_interval == 0:
+            print('Generating samples...')
+            for j in range(num_gens):
+                print(f'Epoch {epoch} [{k+1}/{len(loader)}] gen {j}:', end=' ')
+                res = generate(model, loader.dataset, max_length=gen_max_length)
+                print(''.join(res[1:]))
 
     print(f'Epoch {epoch} done in {runtime.total:.2f}s')
     return loss.mean, ppl.mean
