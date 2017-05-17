@@ -2,7 +2,8 @@
 
 ## Requirements
 
-[PyTorch](http://pytorch.org/) version 0.1.12 or later.
+- Python 3.6 or higher
+- [PyTorch](http://pytorch.org/) version 0.1.12 or later.
 
 ## Train the model
 
